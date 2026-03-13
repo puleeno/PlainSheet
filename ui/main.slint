@@ -1,0 +1,246 @@
+import {
+    Button,
+    VerticalBox,
+    HorizontalBox,
+    StandardTableView,
+    LineEdit,
+    ScrollView,
+    StandardListView,
+} from "std-widgets.slint";
+
+export struct ExtensionItem {
+    name: string,
+    id: string,
+    category: string,
+}
+
+export component AppWindow inherits Window {
+    title: "Plainsheet - High Performance CSV Editor";
+    min-width: 1100px;
+    min-height: 800px;
+    background: #0b0e14; // Ultra dark background
+
+    // Callbacks
+    callback open-file();
+    callback save-file();
+    callback run-extension(string);
+    
+    // Properties
+    in-out property <[[StandardListViewItem]]> table-data: [[]];
+    in-out property <[TableColumn]> table-header: [{ title: "Column 1" }, { title: "Column 2" }, { title: "Column 3" }];
+    in-out property <[StandardListViewItem]> extensions-list: [];
+    in-out property <string> status-text: "System Ready";
+    in-out property <int> row-count: 0;
+    in-out property <bool> is-loading: false;
+
+    VerticalBox {
+        padding: 0px;
+        spacing: 0px;
+
+        // --- Premium Navbar ---
+        Rectangle {
+            background: @linear-gradient(90deg, #161b22 0%, #0d1117 100%);
+            height: 65px;
+            
+            // Border bottom simulator
+            Rectangle {
+                height: 1px;
+                background: #30363d;
+                y: parent.height - 1px;
+            }
+
+            HorizontalBox {
+                padding-left: 20px;
+                padding-right: 20px;
+                padding-top: 12px;
+                padding-bottom: 12px;
+                alignment: center;
+                spacing: 20px;
+                
+                // Brand
+                HorizontalBox {
+                    spacing: 8px;
+                    alignment: start;
+                    Text {
+                        text: "PLAINSHEET";
+                        font-size: 18px;
+                        color: #58a6ff;
+                        font-weight: 800;
+                        letter-spacing: 1.5px;
+                    }
+                }
+
+                Rectangle {
+                    horizontal-stretch: 1.0;
+                }
+
+                // Actions
+                HorizontalBox {
+                    spacing: 12px;
+                    Button {
+                        text: "📂 Open Data";
+                        clicked => {
+                            root.open-file()
+                        }
+                        primary: true;
+                    }
+
+                    Button {
+                        text: "💾 Export CSV";
+                        clicked => {
+                            root.save-file()
+                        }
+                    }
+                }
+
+                Rectangle {
+                    horizontal-stretch: 1.0;
+                }
+
+                // Status Indicator
+                HorizontalBox {
+                    spacing: 10px;
+                    if (is-loading): Rectangle {
+                        width: 10px;
+                        height: 10px;
+                        border-radius: 5px;
+                        background: #f85149;
+                    }
+                    Text {
+                        text: is-loading ? "Processing..." : "Engine: Idle";
+                        color: is-loading ? #f85149 : #8b949e;
+                        font-size: 13px;
+                        font-weight: 600;
+                    }
+                }
+            }
+        }
+
+        HorizontalBox {
+            padding: 0px;
+            spacing: 0px;
+
+            // --- Sidebar ---
+            Rectangle {
+                width: 280px;
+                background: #0d1117;
+                
+                // Border right simulator
+                Rectangle {
+                    width: 1px;
+                    background: #30363d;
+                    x: parent.width - 1px;
+                }
+
+                VerticalBox {
+                    padding: 20px;
+                    alignment: start;
+                    spacing: 18px;
+                    Text {
+                        text: "EXTENSIONS";
+                        color: #8b949e;
+                        font-size: 11px;
+                        font-weight: 800;
+                        letter-spacing: 1px;
+                    }
+
+                    ScrollView {
+                        VerticalBox {
+                            padding: 0px;
+                            spacing: 8px;
+                            alignment: start;
+                            for ext[i] in extensions-list: Button {
+                                text: ext.text;
+                                width: 240px;
+                                clicked => {
+                                    root.run-extension(ext.text)
+                                }
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        vertical-stretch: 1.0;
+                    }
+                    
+                    // Console Box
+                    Rectangle {
+                        background: #161b22;
+                        height: 140px;
+                        border-radius: 6px;
+                        border-width: 1px;
+                        border-color: #30363d;
+                        padding: 12px;
+                        VerticalBox {
+                            Text {
+                                text: "SYSTEM LOGS";
+                                color: #58a6ff;
+                                font-size: 10px;
+                                font-weight: 800;
+                            }
+
+                            Text {
+                                text: status-text;
+                                color: #c9d1d9;
+                                font-size: 12px;
+                                wrap: word-wrap;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // --- Main Table Area ---
+            VerticalBox {
+                padding: 20px;
+                Rectangle {
+                    background: #0d1117;
+                    border-radius: 8px;
+                    border-width: 1px;
+                    border-color: #30363d;
+                    clip: true;
+
+                    StandardTableView {
+                        columns: table-header;
+                        rows: table-data;
+                    }
+                }
+            }
+        }
+
+        // --- Premium Footer ---
+        Rectangle {
+            background: #161b22;
+            height: 30px;
+            
+            // Border top simulator
+            Rectangle {
+                height: 1px;
+                background: #30363d;
+                y: 0px;
+            }
+
+            HorizontalBox {
+                padding-left: 20px;
+                padding-right: 20px;
+                Text {
+                    text: "Dataset Engine v1.0 | Slint Native Rendering";
+                    color: #484f58;
+                    font-size: 11px;
+                    vertical-alignment: center;
+                }
+
+                Rectangle {
+                    horizontal-stretch: 1.0;
+                }
+
+                Text {
+                    text: "Rows Indexed: " + row-count;
+                    color: #8b949e;
+                    font-size: 11px;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+}

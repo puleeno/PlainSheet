@@ -1,0 +1,28 @@
+graph TD
+    subgraph "Frontend Layer (Slint UI)"
+        A[User Interaction] -->|Click Button| B(Main Window Callback)
+        B -->|Update| C[StandardTableView]
+    end
+
+    subgraph "Core Backend Layer (Rust)"
+        B -->|Action Name + Data| D{PyO3 Bridge}
+        D -->|1. Data Conversion| E[ModelRc to PyList]
+        G[PyList to ModelRc] -->|4. Update State| C
+        
+        subgraph "FileSystem"
+            H[(CSV File)] <-->|Read/Write| B
+        end
+    end
+
+    subgraph "Extension Layer (Python)"
+        E -->|2. Invoke Function| F[Python Action Hook]
+        F -->|Processing Logic| F
+        F -->|3. Return Result| G
+    end
+
+    %% Hook Points
+    F -.->|Hook: validate_data| F
+    F -.->|Hook: bulk_transform| F
+    F -.->|Hook: pre_save_check| F
+    F -.->|Hook: custom_export| F
+    
