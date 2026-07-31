@@ -37,6 +37,50 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Err(e) => ui.set_status_text(format!("Extension Error: {}", e).into()),
     }
 
+    // Window close
+    ui.on_window_close({
+        let ui_handle = ui_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                ui.hide().unwrap();
+            }
+        }
+    });
+
+    // Window minimize
+    ui.on_window_minimize({
+        let ui_handle = ui_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                ui.window().set_minimized(true);
+            }
+        }
+    });
+
+    // Window maximize
+    ui.on_window_maximize({
+        let ui_handle = ui_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                let is_maximized = ui.window().is_maximized();
+                ui.window().set_maximized(!is_maximized);
+            }
+        }
+    });
+
+    // Window drag
+    ui.on_drag_window({
+        let ui_handle = ui_handle.clone();
+        move |dx, dy| {
+            if let Some(ui) = ui_handle.upgrade() {
+                let pos = ui.window().position();
+                let new_x = pos.x + dx as i32;
+                let new_y = pos.y + dy as i32;
+                ui.window().set_position(slint::PhysicalPosition::new(new_x, new_y));
+            }
+        }
+    });
+
     ui.on_open_file({
         let ui_handle = ui_handle.clone();
         let state = state.clone();

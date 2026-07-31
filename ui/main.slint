@@ -116,15 +116,44 @@ component SelectableTable inherits Rectangle {
     }
 }
 
+component WindowButton inherits Rectangle {
+    in property <string> btn-text;
+    in property <color> hover-color: #334155;
+    callback clicked();
+
+    width: 36px;
+    height: 32px;
+    background: btn-touch.has-hover ? (btn-touch.pressed ? hover-color : hover-color) : transparent;
+    border-radius: 4px;
+
+    Text {
+        text: btn-text;
+        color: btn-touch.has-hover ? #ffffff : #94a3b8;
+        font-size: 12px;
+        font-weight: 700;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    btn-touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
 export component AppWindow inherits Window {
-    title: "Plainsheet Pro - Enterprise CSV Engine";
+    title: "";
     min-width: 1200px;
     min-height: 850px;
     background: #ffffff;
+    no-frame: true;
 
     callback open-file();
     callback save-file();
     callback run-extension(string);
+    callback window-close();
+    callback window-minimize();
+    callback window-maximize();
+    callback drag-window(length, length);
 
     in-out property <[[string]]> table-data: [];
     in-out property <[string]> table-header: ["A", "B", "C", "D"];
@@ -134,44 +163,75 @@ export component AppWindow inherits Window {
     in-out property <bool> is-loading: false;
     in-out property <int> selected-column: -1;
 
+    // Drag state
+    in-out property <length> last-mouse-x: 0;
+    in-out property <length> last-mouse-y: 0;
+    in-out property <bool> is-dragging: false;
+
     VerticalBox {
         padding: 0;
         spacing: 0;
 
-        // 1. TOP HEADER
+        // CUSTOM TITLE BAR
         Rectangle {
-            height: 60px;
+            height: 44px;
             background: #0f172a;
+
+            // Drag area - entire title bar
+            drag-area := TouchArea {
+                pointer-event(ev) => {
+                    if (ev.kind == PointerEventKind.down) {
+                        root.is-dragging = true;
+                        root.last-mouse-x = self.mouse-x;
+                        root.last-mouse-y = self.mouse-y;
+                    } else if (ev.kind == PointerEventKind.up) {
+                        root.is-dragging = false;
+                        root.last-mouse-x = 0;
+                        root.last-mouse-y = 0;
+                    }
+                }
+                moved => {
+                    if (root.is-dragging) {
+                        root.drag-window(self.mouse-x - root.last-mouse-x, self.mouse-y - root.last-mouse-y);
+                        root.last-mouse-x = self.mouse-x;
+                        root.last-mouse-y = self.mouse-y;
+                    }
+                }
+            }
+
             HorizontalBox {
-                padding-left: 20px;
-                padding-right: 20px;
-                spacing: 20px;
+                padding-left: 16px;
+                padding-right: 8px;
+                spacing: 12px;
                 alignment: center;
 
+                // Logo & Title
                 HorizontalBox {
-                    spacing: 12px;
+                    spacing: 10px;
                     alignment: start;
+
                     Rectangle {
-                        width: 32px;
-                        height: 32px;
+                        width: 28px;
+                        height: 28px;
                         background: #4f46e5;
                         border-radius: 6px;
                         Text {
                             text: "⊞";
                             color: white;
-                            font-size: 18px;
+                            font-size: 16px;
                             font-weight: 900;
                             horizontal-alignment: center;
                             vertical-alignment: center;
                         }
                     }
+
                     VerticalBox {
                         alignment: center;
                         spacing: 0;
                         Text {
                             text: "PLAINSHEET PRO";
                             color: #ffffff;
-                            font-size: 13px;
+                            font-size: 12px;
                             font-weight: 900;
                             letter-spacing: 1px;
                         }
@@ -186,34 +246,36 @@ export component AppWindow inherits Window {
 
                 Rectangle { horizontal-stretch: 1; }
 
+                // Search Box
                 Rectangle {
-                    width: 480px;
-                    height: 36px;
+                    width: 420px;
+                    height: 30px;
                     background: #1e293b;
-                    border-radius: 8px;
+                    border-radius: 6px;
                     HorizontalBox {
-                        padding-left: 15px;
+                        padding-left: 12px;
                         alignment: center;
-                        Text { text: "🔍"; font-size: 12px; opacity: 0.4; }
-                        LineEdit { placeholder-text: "Instant grid search..."; font-size: 13px; }
+                        Text { text: "🔍"; font-size: 11px; opacity: 0.4; }
+                        LineEdit { placeholder-text: "Instant grid search..."; font-size: 12px; }
                     }
                 }
 
                 Rectangle { horizontal-stretch: 1; }
 
+                // Window Controls
                 HorizontalBox {
-                    spacing: 12px;
+                    spacing: 4px;
                     alignment: end;
 
                     Rectangle {
-                        height: 34px;
+                        height: 30px;
                         background: #ffffff10;
                         border-radius: 6px;
                         HorizontalBox {
-                            padding-left: 15px;
-                            padding-right: 15px;
+                            padding-left: 12px;
+                            padding-right: 12px;
                             alignment: center;
-                            Text { text: "COMMANDS  ⌘K"; color: #ffffff60; font-size: 10px; font-weight: 800; vertical-alignment: center; }
+                            Text { text: "⌘K"; color: #ffffff60; font-size: 10px; font-weight: 800; vertical-alignment: center; }
                         }
                     }
 
@@ -223,16 +285,52 @@ export component AppWindow inherits Window {
                     }
 
                     Rectangle {
-                        height: 34px;
+                        height: 30px;
                         background: #ffffff;
                         border-radius: 6px;
                         HorizontalBox {
-                            padding-left: 15px;
-                            padding-right: 15px;
-                            spacing: 8px;
+                            padding-left: 12px;
+                            padding-right: 12px;
+                            spacing: 6px;
                             alignment: center;
-                            Text { text: "📂 EXPORT"; color: #000000; font-size: 11px; font-weight: 900; vertical-alignment: center; }
+                            Text { text: "📂 EXPORT"; color: #000000; font-size: 10px; font-weight: 900; vertical-alignment: center; }
                             Text { text: "▼"; color: #000000; font-size: 8px; vertical-alignment: center; }
+                        }
+                    }
+
+                    // Separator
+                    Rectangle { width: 1px; height: 20px; background: #334155; }
+
+                    // Minimize
+                    WindowButton {
+                        btn-text: "−";
+                        clicked => { root.window-minimize(); }
+                    }
+
+                    // Maximize
+                    WindowButton {
+                        btn-text: "□";
+                        clicked => { root.window-maximize(); }
+                    }
+
+                    // Close
+                    Rectangle {
+                        width: 36px;
+                        height: 32px;
+                        background: close-touch.has-hover ? (close-touch.pressed ? #dc2626 : #ef4444) : transparent;
+                        border-radius: 4px;
+
+                        Text {
+                            text: "×";
+                            color: close-touch.has-hover ? #ffffff : #94a3b8;
+                            font-size: 14px;
+                            font-weight: 700;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        close-touch := TouchArea {
+                            clicked => { root.window-close(); }
                         }
                     }
                 }
@@ -241,7 +339,7 @@ export component AppWindow inherits Window {
 
         // 2. MENU BAR
         Rectangle {
-            height: 34px;
+            height: 32px;
             background: #000000;
             HorizontalBox {
                 padding-left: 20px;
@@ -249,7 +347,7 @@ export component AppWindow inherits Window {
                 spacing: 0px;
 
                 Rectangle {
-                    height: 34px;
+                    height: 32px;
                     background: touch-file.pressed ? #1e293b : touch-file.has-hover ? #0f172a : transparent;
                     border-radius: 4px;
                     HorizontalBox {
@@ -263,7 +361,7 @@ export component AppWindow inherits Window {
                 }
 
                 Rectangle {
-                    height: 34px;
+                    height: 32px;
                     background: touch-edit.pressed ? #1e293b : touch-edit.has-hover ? #0f172a : transparent;
                     border-radius: 4px;
                     HorizontalBox {
@@ -277,7 +375,7 @@ export component AppWindow inherits Window {
                 }
 
                 Rectangle {
-                    height: 34px;
+                    height: 32px;
                     background: touch-data.pressed ? #1e293b : touch-data.has-hover ? #0f172a : transparent;
                     border-radius: 4px;
                     HorizontalBox {
@@ -291,7 +389,7 @@ export component AppWindow inherits Window {
                 }
 
                 Rectangle {
-                    height: 34px;
+                    height: 32px;
                     background: touch-tools.pressed ? #1e293b : touch-tools.has-hover ? #0f172a : transparent;
                     border-radius: 4px;
                     HorizontalBox {
@@ -305,7 +403,7 @@ export component AppWindow inherits Window {
                 }
 
                 Rectangle {
-                    height: 34px;
+                    height: 32px;
                     background: touch-help.pressed ? #1e293b : touch-help.has-hover ? #0f172a : transparent;
                     border-radius: 4px;
                     HorizontalBox {
@@ -322,7 +420,7 @@ export component AppWindow inherits Window {
 
         // 3. TAB BAR
         Rectangle {
-            height: 38px;
+            height: 36px;
             background: #f1f5f9;
             HorizontalBox {
                 padding-left: 15px;
@@ -330,7 +428,7 @@ export component AppWindow inherits Window {
                 spacing: 4px;
 
                 Rectangle {
-                    height: 30px;
+                    height: 28px;
                     width: 180px;
                     background: #ffffff;
                     border-radius: 4px;
@@ -346,8 +444,8 @@ export component AppWindow inherits Window {
                 }
 
                 Rectangle {
-                    width: 30px;
-                    height: 30px;
+                    width: 28px;
+                    height: 28px;
                     y: 4px;
                     Text { text: "+"; color: #94a3b8; font-size: 18px; horizontal-alignment: center; vertical-alignment: center; }
                 }
