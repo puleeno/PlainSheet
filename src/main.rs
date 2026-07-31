@@ -1,7 +1,7 @@
 slint::include_modules!();
 
 use rfd::FileDialog;
-use slint::{ComponentHandle, ModelRc, SharedString, StandardListViewItem, VecModel};
+use slint::{ComponentHandle, ModelRc, SharedString, StandardListViewItem, VecModel, Model};
 use std::sync::{Arc, Mutex};
 
 mod big_data;
@@ -125,6 +125,39 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             drop(state_lock);
             update_table_data(&ui, &sorted_data);
+        }
+    });
+
+    // Revert callback - reverse current data order
+    ui.on_revert_data({
+        let ui_handle = ui_handle.clone();
+        move || {
+            let ui = match ui_handle.upgrade() {
+                Some(u) => u,
+                None => return,
+            };
+
+            // Get current displayed data
+            let current_data: Vec<Vec<String>> = {
+                let rows = ui.get_table_data();
+                let mut data = Vec::new();
+                for i in 0..rows.row_count() {
+                    let row = rows.row_data(i).unwrap();
+                    let mut row_data = Vec::new();
+                    for j in 0..row.row_count() {
+                        let cell = row.row_data(j).unwrap();
+                        row_data.push(cell.to_string());
+                    }
+                    data.push(row_data);
+                }
+                data
+            };
+
+            // Reverse the data
+            let mut reversed_data = current_data;
+            reversed_data.reverse();
+
+            update_table_data(&ui, &reversed_data);
         }
     });
 

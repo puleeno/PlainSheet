@@ -40,6 +40,12 @@ component SelectableTable inherits Rectangle {
 
     callback column-clicked(int);
     callback sort-clicked(int, bool);
+    callback revert-data();
+
+    // Context menu state
+    in-out property <bool> context-menu-visible: false;
+    in-out property <length> context-menu-x: 0;
+    in-out property <length> context-menu-y: 0;
 
     VerticalLayout {
         padding: 0;
@@ -90,6 +96,13 @@ component SelectableTable inherits Rectangle {
                     }
 
                     touch-header := TouchArea {
+                        pointer-event(ev) => {
+                            if (ev.kind == PointerEventKind.down && ev.button == PointerEventButton.right) {
+                                root.context-menu-visible = true;
+                                root.context-menu-x = self.absolute-position.x + self.mouse-x;
+                                root.context-menu-y = self.absolute-position.y + self.mouse-y + 40px;
+                            }
+                        }
                         clicked => {
                             root.column-clicked(col-idx);
 
@@ -129,6 +142,51 @@ component SelectableTable inherits Rectangle {
                         cell-text: row-idx < root.rows.length && col-idx < root.rows[row-idx].length ? root.rows[row-idx][col-idx] : "";
                         is-selected: col-idx == root.selected-column;
                         even: mod(row-idx, 2) == 0;
+                    }
+                }
+            }
+        }
+    }
+
+    // Context Menu
+    context-popup := PopupWindow {
+        x: root.context-menu-x;
+        y: root.context-menu-y;
+        close-on-click: true;
+        visible: root.context-menu-visible;
+
+        Rectangle {
+            width: 180px;
+            height: 36px;
+            background: #ffffff;
+            border-radius: 8px;
+            border-color: #e2e8f0;
+            border-width: 1px;
+
+            HorizontalLayout {
+                padding-left: 12px;
+                padding-right: 12px;
+                alignment: start;
+
+                Text {
+                    text: "↩ Revert Order";
+                    color: revert-touch.has-hover ? #ffffff : #1e293b;
+                    font-size: 13px;
+                    font-weight: 600;
+                    vertical-alignment: center;
+                }
+            }
+
+            Rectangle {
+                width: 180px;
+                height: 36px;
+                background: revert-touch.has-hover ? #6366f1 : transparent;
+                border-radius: 8px;
+
+                revert-touch := TouchArea {
+                    clicked => {
+                        root.context-menu-visible = false;
+                        root.revert-data();
                     }
                 }
             }
@@ -175,6 +233,7 @@ export component AppWindow inherits Window {
     callback window-maximize();
     callback drag-window(length, length);
     callback sort-clicked(int, bool);
+    callback revert-data();
 
     in-out property <[[string]]> table-data: [];
     in-out property <[string]> table-header: ["A", "B", "C", "D"];
@@ -494,6 +553,9 @@ export component AppWindow inherits Window {
                     root.sorted-column = col;
                     root.sort-ascending = asc;
                     root.sort-clicked(col, asc);
+                }
+                revert-data() => {
+                    root.revert-data();
                 }
             }
         }
