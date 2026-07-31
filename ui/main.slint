@@ -35,8 +35,11 @@ component SelectableTable inherits Rectangle {
     in property <[string]> columns;
     in property <[[string]]> rows;
     in-out property <int> selected-column: -1;
+    in-out property <int> sorted-column: -1;
+    in-out property <bool> sort-ascending: true;
 
     callback column-clicked(int);
+    callback sort-clicked(int, bool);
 
     VerticalLayout {
         padding: 0;
@@ -58,7 +61,7 @@ component SelectableTable inherits Rectangle {
 
                     HorizontalLayout {
                         padding-left: 12px;
-                        padding-right: 12px;
+                        padding-right: 8px;
                         alignment: space-between;
 
                         Text {
@@ -68,24 +71,41 @@ component SelectableTable inherits Rectangle {
                             font-weight: 800;
                             vertical-alignment: center;
                             overflow: elide;
+                            horizontal-stretch: 1;
                         }
 
-                        Text {
-                            text: col-idx == root.selected-column ? "▲" : "";
-                            color: #6366f1;
-                            font-size: 10px;
-                            vertical-alignment: center;
+                        // Sort icon
+                        Rectangle {
+                            width: 20px;
+                            height: 20px;
+                            visible: col-idx == root.sorted-column;
+                            Text {
+                                text: root.sort-ascending ? "▲" : "▼";
+                                color: #6366f1;
+                                font-size: 10px;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
                         }
                     }
 
                     touch-header := TouchArea {
                         clicked => {
-                            if (root.selected-column == col-idx) {
-                                root.selected-column = -1;
+                            root.column-clicked(col-idx);
+
+                            // Toggle sort: ASC -> DESC -> unsorted
+                            if (root.sorted-column == col-idx) {
+                                if (root.sort-ascending) {
+                                    root.sort-ascending = false;
+                                } else {
+                                    root.sorted-column = -1;
+                                    root.sort-ascending = true;
+                                }
                             } else {
-                                root.selected-column = col-idx;
+                                root.sorted-column = col-idx;
+                                root.sort-ascending = true;
                             }
-                            root.column-clicked(root.selected-column);
+                            root.sort-clicked(root.sorted-column, root.sort-ascending);
                         }
                     }
                 }
@@ -154,6 +174,7 @@ export component AppWindow inherits Window {
     callback window-minimize();
     callback window-maximize();
     callback drag-window(length, length);
+    callback sort-clicked(int, bool);
 
     in-out property <[[string]]> table-data: [];
     in-out property <[string]> table-header: ["A", "B", "C", "D"];
@@ -162,6 +183,8 @@ export component AppWindow inherits Window {
     in-out property <int> row-count: 0;
     in-out property <bool> is-loading: false;
     in-out property <int> selected-column: -1;
+    in-out property <int> sorted-column: -1;
+    in-out property <bool> sort-ascending: true;
 
     // Drag state
     in-out property <length> last-mouse-x: 0;
@@ -462,8 +485,15 @@ export component AppWindow inherits Window {
                 columns: root.table-header;
                 rows: root.table-data;
                 selected-column: root.selected-column;
+                sorted-column: root.sorted-column;
+                sort-ascending: root.sort-ascending;
                 column-clicked(col) => {
                     root.selected-column = col;
+                }
+                sort-clicked(col, asc) => {
+                    root.sorted-column = col;
+                    root.sort-ascending = asc;
+                    root.sort-clicked(col, asc);
                 }
             }
         }

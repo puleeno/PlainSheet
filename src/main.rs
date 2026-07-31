@@ -10,6 +10,8 @@ mod extensions;
 
 struct AppState {
     file_manager: Option<big_data::LargeFileManager>,
+    original_data: Vec<Vec<String>>,
+    original_headers: Vec<String>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -18,7 +20,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ui = AppWindow::new()?;
     let ui_handle = ui.as_weak();
 
-    let state = Arc::new(Mutex::new(AppState { file_manager: None }));
+    let state = Arc::new(Mutex::new(AppState {
+        file_manager: None,
+        original_data: Vec::new(),
+        original_headers: Vec::new(),
+    }));
 
     pyo3::prepare_freethreaded_python();
 
@@ -81,6 +87,47 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    // Sort callback
+    ui.on_sort_clicked({
+        let ui_handle = ui_handle.clone();
+        let state = state.clone();
+        move |col, ascending| {
+            let ui = match ui_handle.upgrade() {
+                Some(u) => u,
+                None => return,
+            };
+            let state_lock = state.lock().unwrap();
+
+            if col < 0 || state_lock.original_data.is_empty() {
+                // Unsorted - restore original
+                let data = &state_lock.original_data;
+                update_table_data(&ui, data);
+                return;
+            }
+
+            let col = col as usize;
+            let mut sorted_data = state_lock.original_data.clone();
+
+            sorted_data.sort_by(|a, b| {
+                let a_val = a.get(col).map(|s| s.as_str()).unwrap_or("");
+                let b_val = b.get(col).map(|s| s.as_str()).unwrap_or("");
+
+                // Try numeric comparison first
+                if let (Ok(a_num), Ok(b_num)) = (a_val.parse::<f64>(), b_val.parse::<f64>()) {
+                    let cmp = a_num.partial_cmp(&b_num).unwrap_or(std::cmp::Ordering::Equal);
+                    if ascending { cmp } else { cmp.reverse() }
+                } else {
+                    // String comparison
+                    let cmp = a_val.cmp(b_val);
+                    if ascending { cmp } else { cmp.reverse() }
+                }
+            });
+
+            drop(state_lock);
+            update_table_data(&ui, &sorted_data);
+        }
+    });
+
     ui.on_open_file({
         let ui_handle = ui_handle.clone();
         let state = state.clone();
@@ -104,14 +151,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             let headers = manager.headers.clone();
                             let first_chunk = manager.read_lines(1, 100).unwrap_or_default();
 
-                            state_inner.lock().unwrap().file_manager = Some(manager);
+                            {
+                                let mut state = state_inner.lock().unwrap();
+                                state.original_data = first_chunk.clone();
+                                state.original_headers = headers.clone();
+                                state.file_manager = Some(manager);
+                            }
 
                             let ui_handle_final = ui_handle_inner.clone();
                             slint::invoke_from_event_loop(move || {
                                 if let Some(ui) = ui_handle_final.upgrade() {
-                                    setup_ui_data(&ui, headers, first_chunk, total_rows);
+                                    setup_ui_data(&ui, &headers, &first_chunk, total_rows);
                                     ui.set_is_loading(false);
                                     ui.set_selected_column(-1);
+                                    ui.set_sorted_column(-1);
+                                    ui.set_sort_ascending(true);
                                     ui.set_status_text(format!("Indexed {} rows.", total_rows).into());
                                 }
                             }).unwrap();
@@ -160,16 +214,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn setup_ui_data(ui: &AppWindow, headers: Vec<String>, data: Vec<Vec<String>>, total_rows: usize) {
-    let header_model: Vec<SharedString> = headers.into_iter().map(|h| h.into()).collect();
-    ui.set_table_header(ModelRc::new(VecModel::from(header_model)));
-
+fn update_table_data(ui: &AppWindow, data: &[Vec<String>]) {
     let mut rows_vec = Vec::new();
     for record in data {
-        let row: Vec<SharedString> = record.into_iter().map(|s| s.into()).collect();
+        let row: Vec<SharedString> = record.iter().map(|s| s.as_str().into()).collect();
         rows_vec.push(ModelRc::new(VecModel::from(row)));
     }
-
     ui.set_table_data(ModelRc::new(VecModel::from(rows_vec)));
+}
+
+fn setup_ui_data(ui: &AppWindow, headers: &[String], data: &[Vec<String>], total_rows: usize) {
+    let header_model: Vec<SharedString> = headers.iter().map(|h| h.as_str().into()).collect();
+    ui.set_table_header(ModelRc::new(VecModel::from(header_model)));
+
+    update_table_data(ui, data);
     ui.set_row_count(total_rows as i32);
 }
