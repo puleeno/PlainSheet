@@ -2,11 +2,119 @@ import {
     Button,
     VerticalBox,
     HorizontalBox,
-    StandardTableView,
     LineEdit,
-    ScrollView,
-    StandardListView,
+    ListView,
 } from "std-widgets.slint";
+
+component SelectableCell inherits Rectangle {
+    in property <string> cell-text;
+    in property <bool> is-selected;
+    in property <bool> even;
+
+    background: is-selected ? #c7d2fe : even ? #f8fafc : #ffffff;
+    border-color: #e2e8f0;
+    border-width: 1px;
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        padding-top: 8px;
+        padding-bottom: 8px;
+
+        Text {
+            text: cell-text;
+            color: is-selected ? #312e81 : #1e293b;
+            font-size: 13px;
+            overflow: elide;
+            vertical-alignment: center;
+        }
+    }
+}
+
+component SelectableTable inherits Rectangle {
+    in property <[string]> columns;
+    in property <[[string]]> rows;
+    in-out property <int> selected-column: -1;
+
+    callback column-clicked(int);
+
+    VerticalLayout {
+        padding: 0;
+        spacing: 0;
+
+        // Header
+        Rectangle {
+            height: 40px;
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+            border-width: 2px;
+
+            HorizontalLayout {
+                for col-idx in root.columns.length : Rectangle {
+                    horizontal-stretch: 1;
+                    background: col-idx == root.selected-column ? #c7d2fe : touch-header.has-hover ? #e2e8f0 : transparent;
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+
+                    HorizontalLayout {
+                        padding-left: 12px;
+                        padding-right: 12px;
+                        alignment: space-between;
+
+                        Text {
+                            text: col-idx < root.columns.length ? root.columns[col-idx] : "";
+                            color: col-idx == root.selected-column ? #312e81 : #475569;
+                            font-size: 12px;
+                            font-weight: 800;
+                            vertical-alignment: center;
+                            overflow: elide;
+                        }
+
+                        Text {
+                            text: col-idx == root.selected-column ? "▲" : "";
+                            color: #6366f1;
+                            font-size: 10px;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    touch-header := TouchArea {
+                        clicked => {
+                            if (root.selected-column == col-idx) {
+                                root.selected-column = -1;
+                            } else {
+                                root.selected-column = col-idx;
+                            }
+                            root.column-clicked(root.selected-column);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Body
+        ListView {
+            vertical-stretch: 1;
+
+            for row-idx in root.rows.length : VerticalLayout {
+                padding: 0;
+                spacing: 0;
+                min-height: 36px;
+
+                HorizontalLayout {
+                    padding: 0;
+                    spacing: 0;
+
+                    for col-idx in (row-idx < root.rows.length ? root.rows[row-idx].length : 0) : SelectableCell {
+                        cell-text: row-idx < root.rows.length && col-idx < root.rows[row-idx].length ? root.rows[row-idx][col-idx] : "";
+                        is-selected: col-idx == root.selected-column;
+                        even: mod(row-idx, 2) == 0;
+                    }
+                }
+            }
+        }
+    }
+}
 
 export component AppWindow inherits Window {
     title: "Plainsheet Pro - Enterprise CSV Engine";
@@ -14,24 +122,23 @@ export component AppWindow inherits Window {
     min-height: 850px;
     background: #ffffff;
 
-    // --- Callbacks ---
     callback open-file();
     callback save-file();
     callback run-extension(string);
-    
-    // --- Properties ---
-    in-out property <[[StandardListViewItem]]> table-data: [[]];
-    in-out property <[TableColumn]> table-header: [{ title: "A" }, { title: "B" }, { title: "C" }, { title: "D" }];
+
+    in-out property <[[string]]> table-data: [];
+    in-out property <[string]> table-header: ["A", "B", "C", "D"];
     in-out property <[StandardListViewItem]> extensions-list: [];
     in-out property <string> status-text: "System Ready";
     in-out property <int> row-count: 0;
     in-out property <bool> is-loading: false;
+    in-out property <int> selected-column: -1;
 
     VerticalBox {
-        padding: 0px;
-        spacing: 0px;
+        padding: 0;
+        spacing: 0;
 
-        // 1. TOP HEADER (Dark Blue/Slate)
+        // 1. TOP HEADER
         Rectangle {
             height: 60px;
             background: #0f172a;
@@ -41,7 +148,6 @@ export component AppWindow inherits Window {
                 spacing: 20px;
                 alignment: center;
 
-                // Logo & Title
                 HorizontalBox {
                     spacing: 12px;
                     alignment: start;
@@ -55,12 +161,13 @@ export component AppWindow inherits Window {
                             color: white;
                             font-size: 18px;
                             font-weight: 900;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
                         }
                     }
-
                     VerticalBox {
                         alignment: center;
-                        spacing: 0px;
+                        spacing: 0;
                         Text {
                             text: "PLAINSHEET PRO";
                             color: #ffffff;
@@ -68,7 +175,6 @@ export component AppWindow inherits Window {
                             font-weight: 900;
                             letter-spacing: 1px;
                         }
-
                         Text {
                             text: "UNTITLED_DATA.CSV";
                             color: #94a3b8;
@@ -78,11 +184,8 @@ export component AppWindow inherits Window {
                     }
                 }
 
-                Rectangle {
-                    horizontal-stretch: 1.0;
-                }
+                Rectangle { horizontal-stretch: 1; }
 
-                // Search Box
                 Rectangle {
                     width: 480px;
                     height: 36px;
@@ -91,97 +194,133 @@ export component AppWindow inherits Window {
                     HorizontalBox {
                         padding-left: 15px;
                         alignment: center;
-                        Text {
-                            text: "🔍";
-                            font-size: 12px;
-                            opacity: 0.4;
-                        }
-
-                        LineEdit {
-                            placeholder-text: "Instant grid search...";
-                            font-size: 13px;
-                        }
+                        Text { text: "🔍"; font-size: 12px; opacity: 0.4; }
+                        LineEdit { placeholder-text: "Instant grid search..."; font-size: 13px; }
                     }
                 }
 
-                Rectangle {
-                    horizontal-stretch: 1.0;
-                }
+                Rectangle { horizontal-stretch: 1; }
 
-                // Action Buttons
                 HorizontalBox {
                     spacing: 12px;
                     alignment: end;
+
                     Rectangle {
                         height: 34px;
-                        padding-left: 15px;
-                        padding-right: 15px;
                         background: #ffffff10;
                         border-radius: 6px;
-                        Text {
-                            text: "COMMANDS  ⌘K";
-                            color: #ffffff60;
-                            font-size: 10px;
-                            font-weight: 800;
-                            vertical-alignment: center;
+                        HorizontalBox {
+                            padding-left: 15px;
+                            padding-right: 15px;
+                            alignment: center;
+                            Text { text: "COMMANDS  ⌘K"; color: #ffffff60; font-size: 10px; font-weight: 800; vertical-alignment: center; }
                         }
                     }
 
                     Button {
                         text: "💾 SAVE";
-                        clicked => {
-                            root.save-file()
-                        }
+                        clicked => { root.save-file(); }
                     }
 
                     Rectangle {
                         height: 34px;
-                        padding-left: 15px;
-                        padding-right: 15px;
                         background: #ffffff;
                         border-radius: 6px;
                         HorizontalBox {
+                            padding-left: 15px;
+                            padding-right: 15px;
                             spacing: 8px;
-                            Text {
-                                text: "📂 EXPORT";
-                                color: #000000;
-                                font-size: 11px;
-                                font-weight: 900;
-                                vertical-alignment: center;
-                            }
-
-                            Text {
-                                text: "▼";
-                                color: #000000;
-                                font-size: 8px;
-                                vertical-alignment: center;
-                            }
+                            alignment: center;
+                            Text { text: "📂 EXPORT"; color: #000000; font-size: 11px; font-weight: 900; vertical-alignment: center; }
+                            Text { text: "▼"; color: #000000; font-size: 8px; vertical-alignment: center; }
                         }
                     }
                 }
             }
         }
 
-        // 2. MENU BAR (Deep Black)
+        // 2. MENU BAR
         Rectangle {
             height: 34px;
             background: #000000;
             HorizontalBox {
                 padding-left: 20px;
                 alignment: start;
-                spacing: 25px;
-                for item in ["FILE ⌄", "EDIT ⌄", "DATA ⌄", "TOOLS ⌄", "HELP ⌄"]: Text {
-                    text: item;
-                    color: #94a3b8;
-                    font-size: 11px;
-                    font-weight: 800;
-                    vertical-alignment: center;
-                    letter-spacing: 1px;
+                spacing: 0px;
+
+                Rectangle {
+                    height: 34px;
+                    background: touch-file.pressed ? #1e293b : touch-file.has-hover ? #0f172a : transparent;
+                    border-radius: 4px;
+                    HorizontalBox {
+                        padding-left: 10px;
+                        padding-right: 10px;
+                        alignment: center;
+                        Text { text: "FILE"; color: #94a3b8; font-size: 11px; font-weight: 800; vertical-alignment: center; letter-spacing: 1px; }
+                        Text { text: "⌄"; color: #64748b; font-size: 9px; vertical-alignment: center; }
+                    }
+                    touch-file := TouchArea { clicked => { root.open-file(); } }
+                }
+
+                Rectangle {
+                    height: 34px;
+                    background: touch-edit.pressed ? #1e293b : touch-edit.has-hover ? #0f172a : transparent;
+                    border-radius: 4px;
+                    HorizontalBox {
+                        padding-left: 10px;
+                        padding-right: 10px;
+                        alignment: center;
+                        Text { text: "EDIT"; color: #94a3b8; font-size: 11px; font-weight: 800; vertical-alignment: center; letter-spacing: 1px; }
+                        Text { text: "ㅟ"; color: #64748b; font-size: 9px; vertical-alignment: center; }
+                    }
+                    touch-edit := TouchArea { }
+                }
+
+                Rectangle {
+                    height: 34px;
+                    background: touch-data.pressed ? #1e293b : touch-data.has-hover ? #0f172a : transparent;
+                    border-radius: 4px;
+                    HorizontalBox {
+                        padding-left: 10px;
+                        padding-right: 10px;
+                        alignment: center;
+                        Text { text: "DATA"; color: #94a3b8; font-size: 11px; font-weight: 800; vertical-alignment: center; letter-spacing: 1px; }
+                        Text { text: "ㅟ"; color: #64748b; font-size: 9px; vertical-alignment: center; }
+                    }
+                    touch-data := TouchArea { }
+                }
+
+                Rectangle {
+                    height: 34px;
+                    background: touch-tools.pressed ? #1e293b : touch-tools.has-hover ? #0f172a : transparent;
+                    border-radius: 4px;
+                    HorizontalBox {
+                        padding-left: 10px;
+                        padding-right: 10px;
+                        alignment: center;
+                        Text { text: "TOOLS"; color: #94a3b8; font-size: 11px; font-weight: 800; vertical-alignment: center; letter-spacing: 1px; }
+                        Text { text: "ㅟ"; color: #64748b; font-size: 9px; vertical-alignment: center; }
+                    }
+                    touch-tools := TouchArea { }
+                }
+
+                Rectangle {
+                    height: 34px;
+                    background: touch-help.pressed ? #1e293b : touch-help.has-hover ? #0f172a : transparent;
+                    border-radius: 4px;
+                    HorizontalBox {
+                        padding-left: 10px;
+                        padding-right: 10px;
+                        alignment: center;
+                        Text { text: "HELP"; color: #94a3b8; font-size: 11px; font-weight: 800; vertical-alignment: center; letter-spacing: 1px; }
+                        Text { text: "ㅟ"; color: #64748b; font-size: 9px; vertical-alignment: center; }
+                    }
+                    touch-help := TouchArea { }
                 }
             }
         }
 
-        // 3. TAB BAR (Light Blue/Grey)
+        // 3. TAB BAR
         Rectangle {
             height: 38px;
             background: #f1f5f9;
@@ -189,71 +328,49 @@ export component AppWindow inherits Window {
                 padding-left: 15px;
                 alignment: start;
                 spacing: 4px;
-                
-                // Active Tab
+
                 Rectangle {
                     height: 30px;
                     width: 180px;
                     background: #ffffff;
                     border-radius: 4px;
-                    y: 8px;
-                    
-                    // Indigo top line simulator
-                    Rectangle {
-                        height: 2px;
-                        background: #6366f1;
-                        y: 0px;
-                        width: parent.width;
-                    }
-
+                    y: 4px;
+                    Rectangle { height: 2px; background: #6366f1; y: 0px; width: parent.width; }
                     HorizontalBox {
                         padding-left: 12px;
                         spacing: 8px;
-                        Text {
-                            text: "🗒";
-                            font-size: 12px;
-                            vertical-alignment: center;
-                        }
-
-                        Text {
-                            text: "UNTITLED_DATA.CSV";
-                            color: #000000;
-                            font-size: 10px;
-                            font-weight: 900;
-                            vertical-alignment: center;
-                        }
+                        alignment: center;
+                        Text { text: "🗒"; font-size: 12px; vertical-alignment: center; }
+                        Text { text: "UNTITLED_DATA.CSV"; color: #000000; font-size: 10px; font-weight: 900; vertical-alignment: center; }
                     }
                 }
-                
-                // Add button
+
                 Rectangle {
                     width: 30px;
                     height: 30px;
-                    y: 8px;
-                    Text {
-                        text: "+";
-                        color: #94a3b8;
-                        font-size: 18px;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
-                    }
+                    y: 4px;
+                    Text { text: "+"; color: #94a3b8; font-size: 18px; horizontal-alignment: center; vertical-alignment: center; }
                 }
             }
         }
 
-        // 4. MAIN GRID AREA
+        // 4. MAIN GRID
         Rectangle {
             background: #ffffff;
-            vertical-stretch: 1.0;
-            horizontal-stretch: 1.0;
+            vertical-stretch: 1;
+            horizontal-stretch: 1;
 
-            StandardTableView {
-                columns: table-header;
-                rows: table-data;
+            SelectableTable {
+                columns: root.table-header;
+                rows: root.table-data;
+                selected-column: root.selected-column;
+                column-clicked(col) => {
+                    root.selected-column = col;
+                }
             }
         }
 
-        // 5. FOOTER (Black)
+        // 5. FOOTER
         Rectangle {
             height: 28px;
             background: #000000;
@@ -262,103 +379,49 @@ export component AppWindow inherits Window {
                 padding-right: 20px;
                 alignment: center;
 
-                // Status Left
                 HorizontalBox {
                     spacing: 15px;
                     alignment: start;
+
                     HorizontalBox {
                         spacing: 8px;
-                        Rectangle {
-                            width: 8px;
-                            height: 8px;
-                            border-radius: 4px;
-                            background: #6366f1;
-                            y: (parent.height - 8px) / 2;
-                        }
-
-                        Text {
-                            text: "IDLE";
-                            color: #ffffff;
-                            font-size: 9px;
-                            font-weight: 900;
-                            vertical-alignment: center;
-                        }
+                        alignment: center;
+                        Rectangle { width: 8px; height: 8px; border-radius: 4px; background: #6366f1; }
+                        Text { text: root.selected-column >= 0 ? "COL " + (root.selected-column + 1) + " SELECTED" : "IDLE"; color: #ffffff; font-size: 9px; font-weight: 900; vertical-alignment: center; }
                     }
 
                     HorizontalBox {
                         spacing: 8px;
-                        Text {
-                            text: "📂";
-                            font-size: 10px;
-                            vertical-alignment: center;
-                        }
-
-                        Text {
-                            text: "UNTITLED_DATA.CSV";
-                            color: #94a3b8;
-                            font-size: 9px;
-                            font-weight: 700;
-                            vertical-alignment: center;
-                        }
+                        alignment: center;
+                        Text { text: "📂"; font-size: 10px; vertical-alignment: center; }
+                        Text { text: "UNTITLED_DATA.CSV"; color: #94a3b8; font-size: 9px; font-weight: 700; vertical-alignment: center; }
                     }
 
                     Rectangle {
                         height: 18px;
-                        padding-left: 10px;
-                        padding-right: 10px;
                         background: #1e293b;
                         border-radius: 4px;
-                        Text {
-                            text: "✓ ENTERPRISE LICENSE";
-                            color: #6366f1;
-                            font-size: 9px;
-                            font-weight: 900;
-                            vertical-alignment: center;
+                        HorizontalBox {
+                            padding-left: 10px;
+                            padding-right: 10px;
+                            alignment: center;
+                            Text { text: "✓ ENTERPRISE LICENSE"; color: #6366f1; font-size: 9px; font-weight: 900; vertical-alignment: center; }
                         }
                     }
                 }
 
-                Rectangle {
-                    horizontal-stretch: 1.0;
-                }
+                Rectangle { horizontal-stretch: 1; }
 
-                // Info Center
-                Text {
-                    text: "PLAINSHEET GRID ENGINE";
-                    color: #334155;
-                    font-size: 9px;
-                    font-weight: 900;
-                    letter-spacing: 2px;
-                }
+                Text { text: "PLAINSHEET GRID ENGINE"; color: #334155; font-size: 9px; font-weight: 900; letter-spacing: 2px; }
 
-                Rectangle {
-                    horizontal-stretch: 1.0;
-                }
+                Rectangle { horizontal-stretch: 1; }
 
-                // Stats Right
                 HorizontalBox {
                     spacing: 20px;
                     alignment: end;
-                    Text {
-                        text: "FORMAT: [ , ] / UTF-8 / HDR:ON";
-                        color: #94a3b8;
-                        font-size: 9px;
-                        font-weight: 800;
-                    }
-
-                    Text {
-                        text: "STATS: " + row-count + " ROWS  " + table-header.length + " COLS";
-                        color: #94a3b8;
-                        font-size: 9px;
-                        font-weight: 800;
-                    }
-
-                    Text {
-                        text: "PRO V2.5.0 [EN]";
-                        color: #334155;
-                        font-size: 9px;
-                        font-weight: 800;
-                    }
+                    Text { text: "FORMAT: [ , ] / UTF-8 / HDR:ON"; color: #94a3b8; font-size: 9px; font-weight: 800; }
+                    Text { text: "STATS: " + root.row-count + " ROWS  " + root.table-header.length + " COLS"; color: #94a3b8; font-size: 9px; font-weight: 800; }
+                    Text { text: "PRO V2.5.0 [EN]"; color: #334155; font-size: 9px; font-weight: 800; }
                 }
             }
         }

@@ -1,7 +1,7 @@
 slint::include_modules!();
 
 use rfd::FileDialog;
-use slint::{ComponentHandle, ModelRc, StandardListViewItem, TableColumn, VecModel};
+use slint::{ComponentHandle, ModelRc, SharedString, StandardListViewItem, VecModel};
 use std::sync::{Arc, Mutex};
 
 mod big_data;
@@ -13,7 +13,6 @@ struct AppState {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Initialize embedded extensions from binary if needed
     let _ = embedded_py::init_extensions();
 
     let ui = AppWindow::new()?;
@@ -21,10 +20,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let state = Arc::new(Mutex::new(AppState { file_manager: None }));
 
-    // Initialize Python
     pyo3::prepare_freethreaded_python();
 
-    // 1. Discover Extensions
     match extensions::discover_extensions() {
         Ok(exts) => {
             let items: Vec<StandardListViewItem> = exts
@@ -47,7 +44,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let ui = ui_handle.unwrap();
             if let Some(path) = FileDialog::new()
                 .add_filter("CSV", &["csv"])
-                .pick_file() 
+                .pick_file()
             {
                 ui.set_is_loading(true);
                 ui.set_status_text("Indexing file...".into());
@@ -61,7 +58,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         Ok(manager) => {
                             let total_rows = manager.get_total_rows();
                             let headers = manager.headers.clone();
-                            // Read first 100 lines for the initial view
                             let first_chunk = manager.read_lines(1, 100).unwrap_or_default();
 
                             state_inner.lock().unwrap().file_manager = Some(manager);
@@ -71,6 +67,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 if let Some(ui) = ui_handle_final.upgrade() {
                                     setup_ui_data(&ui, headers, first_chunk, total_rows);
                                     ui.set_is_loading(false);
+                                    ui.set_selected_column(-1);
                                     ui.set_status_text(format!("Indexed {} rows.", total_rows).into());
                                 }
                             }).unwrap();
@@ -120,20 +117,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn setup_ui_data(ui: &AppWindow, headers: Vec<String>, data: Vec<Vec<String>>, total_rows: usize) {
-    let header_model: Vec<TableColumn> = headers.into_iter().map(|h| {
-        let mut col = TableColumn::default();
-        col.title = h.into();
-        col
-    }).collect();
+    let header_model: Vec<SharedString> = headers.into_iter().map(|h| h.into()).collect();
     ui.set_table_header(ModelRc::new(VecModel::from(header_model)));
 
     let mut rows_vec = Vec::new();
     for record in data {
-        let row: Vec<StandardListViewItem> = record.into_iter().map(|s| {
-            let mut item = StandardListViewItem::default();
-            item.text = s.into();
-            item
-        }).collect();
+        let row: Vec<SharedString> = record.into_iter().map(|s| s.into()).collect();
         rows_vec.push(ModelRc::new(VecModel::from(row)));
     }
 
