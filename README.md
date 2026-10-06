@@ -1,9 +1,9 @@
 # Plainsheet
 
-Dynamic CSV Editor with Rust (Slint) and Python (PyO3) Extension System.
+Dynamic CSV Editor with Rust (Sciter.JS) and Python (PyO3) Extension System.
 
 ## Features
-- **Modern UI**: Built with Slint for a premium desktop experience.
+- **Modern UI**: Built with Sciter.JS for a premium desktop experience.
 - **Python Extensions**: Easily extend functionality using Python scripts.
 - **Action Hooks**: Python code can intervene in:
   - Opening files
@@ -25,8 +25,8 @@ Dynamic CSV Editor with Rust (Slint) and Python (PyO3) Extension System.
 
 ## Adding Extensions
 
-Extensions are located in the `extensions/` directory. 
-Edit `extensions/main_ext.py` to add new functions. 
+Extensions are located in the `extensions/` directory.
+Edit `extensions/main_ext.py` to add new functions.
 
 Example:
 ```python

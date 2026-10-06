@@ -1,0 +1,12 @@
+<html>
+<body>
+<div #out>waiting...</div>
+<script>
+window.addEventListener("DOMContentLoaded", function() {
+  let r = Window.this.xcall("ping", "hello from js");
+  document.querySelector("#out").textContent = "got: " + r;
+  console.log("got: " + r);
+});
+</script>
+</body>
+</html>
