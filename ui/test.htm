@@ -1,12 +1,13 @@
-<html>
-<body>
-<div #out>waiting...</div>
+<html><body>
+<div #out>start</div>
 <script>
-window.addEventListener("DOMContentLoaded", function() {
-  let r = Window.this.xcall("ping", "hello from js");
+try {
+  document.querySelector("#out").textContent = "script running";
+  let r = Window.this.xcall("ping", "hello");
   document.querySelector("#out").textContent = "got: " + r;
-  console.log("got: " + r);
-});
+} catch (e) {
+  document.querySelector("#out").textContent = "ERR: " + e;
+}
+Window.this.close();
 </script>
-</body>
-</html>
+</body></html>

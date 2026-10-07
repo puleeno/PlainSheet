@@ -1,0 +1,282 @@
+<html>
+<head>
+  <title>PlainSheet</title>
+  <meta charset="utf-8"/>
+  <link rel="stylesheet" href="app.css"/>
+</head>
+<body>
+<div id="app">
+
+  <!-- 1. BRAND HEADER -->
+  <header id="brand-bar">
+    <div class="brand">
+      <div class="dropdown-wrap">
+        <div class="brand-btn">
+          <div class="brand-logo">P</div>
+          <div class="brand-text">
+            <div class="brand-title"><span id="app-title">PlainSheet</span><i class="caret">▾</i></div>
+            <div class="brand-sub truncate" id="brand-sheet-name"></div>
+          </div>
+        </div>
+        <div class="dropdown" data-dropdown="brand">
+          <button data-act="new-sheet"><i class="ic ic-plus"></i><span data-i18n="newSheet"></span></button>
+          <button data-act="open-file"><i class="ic ic-folder"></i><span data-i18n="openFile"></span></button>
+          <div class="dd-sep"></div>
+          <button data-act="open-addon"><i class="ic ic-puzzle"></i><span data-i18n="marketplace"></span></button>
+          <button data-act="open-settings"><i class="ic ic-settings"></i><span data-i18n="settings"></span></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="search-box">
+      <i class="ic-search"></i>
+      <input id="search-input" type="text" placeholder="" data-i18n-ph="searchPlaceholder"/>
+    </div>
+
+    <div class="hdr-actions">
+      <button class="btn-ghost" data-act="open-palette"><i class="ic ic-bolt"></i><span data-i18n="commands"></span><kbd>⌘K</kbd></button>
+      <button class="btn-save" data-act="save"><i class="ic ic-save"></i><span data-i18n="save"></span></button>
+      <div class="dropdown-wrap export-wrap">
+        <button class="btn-export"><i class="ic ic-folder"></i><span data-i18n="export"></span><i class="caret">▾</i></button>
+        <div class="dropdown" data-dropdown="exports">
+          <button data-act="export-csv"><i class="ic ic-table"></i>CSV</button>
+          <button data-act="export-xlsx"><i class="ic ic-file"></i>Excel</button>
+          <button data-act="export-json"><i class="ic ic-json"></i>JSON</button>
+          <div class="dd-sep"></div>
+          <button data-act="export-md"><i class="ic ic-file"></i>Markdown</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 2. MENU BAR -->
+  <nav id="menu-bar">
+    <div class="dropdown-wrap">
+      <button class="menu-btn"><span data-i18n="menuFile"></span><i class="caret">▾</i></button>
+      <div class="dropdown" data-dropdown="file">
+        <button data-act="new-sheet"><i class="ic ic-plus"></i><span data-i18n="newSheet"></span></button>
+        <button data-act="open-file"><i class="ic ic-folder"></i><span data-i18n="openFile"></span></button>
+        <button data-act="save"><i class="ic ic-save"></i><span data-i18n="saveWorkspace"></span></button>
+        <button data-act="save-file"><i class="ic ic-save"></i><span data-i18n="saveFile"></span></button>
+        <div class="dd-sep"></div>
+        <button data-act="reset"><i class="ic ic-spark"></i><span data-i18n="reset"></span></button>
+      </div>
+    </div>
+    <div class="dropdown-wrap">
+      <button class="menu-btn"><span data-i18n="menuEdit"></span><i class="caret">▾</i></button>
+      <div class="dropdown" data-dropdown="edit">
+        <button data-act="add-row"><i class="ic ic-plus"></i><span data-i18n="addRow"></span></button>
+        <button data-act="add-col"><i class="ic ic-plus"></i><span data-i18n="addCol"></span></button>
+        <div class="dd-sep"></div>
+        <button data-act="delete"><i class="ic ic-trash"></i><span data-i18n="delete"></span></button>
+        <button data-act="clear-sel"><i class="ic ic-spark"></i><span data-i18n="clearSelect"></span></button>
+      </div>
+    </div>
+    <div class="dropdown-wrap">
+      <button class="menu-btn"><span data-i18n="menuData"></span><i class="caret">▾</i></button>
+      <div class="dropdown" data-dropdown="data">
+        <button data-act="sort"><i class="ic ic-sort"></i><span data-i18n="sortActive"></span></button>
+        <div class="dd-sep"></div>
+        <div id="data-addon-menu"></div>
+      </div>
+    </div>
+    <div class="dropdown-wrap">
+      <button class="menu-btn"><span data-i18n="menuTools"></span><i class="caret">▾</i></button>
+      <div class="dropdown" data-dropdown="tools">
+        <button data-act="open-addon"><i class="ic ic-puzzle"></i><span data-i18n="marketplace"></span></button>
+        <button data-act="open-settings"><i class="ic ic-settings"></i><span data-i18n="settings"></span></button>
+        <div class="dd-sep"></div>
+        <div id="tools-addon-menu"></div>
+      </div>
+    </div>
+    <div class="dropdown-wrap">
+      <button class="menu-btn"><span data-i18n="menuHelp"></span><i class="caret">▾</i></button>
+      <div class="dropdown" data-dropdown="help">
+        <button data-act="help-doc"><i class="ic ic-file"></i><span data-i18n="documentation"></span></button>
+        <button data-act="about"><i class="ic ic-spark"></i><span data-i18n="about"></span></button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- 3. TAB BAR -->
+  <div id="tab-bar">
+    <div id="tabs"></div>
+    <button id="tab-add" data-act="new-sheet"><i class="ic ic-plus"></i></button>
+  </div>
+
+  <!-- 4. MAIN -->
+  <div id="main-row">
+    <div id="sheet-wrap">
+      <main id="grid-main">
+        <div id="grid-header"></div>
+        <div id="scroll">
+          <div id="vbody"></div>
+          <div id="scrollbar"><div id="thumb"></div></div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Addon Gallery Side Panel -->
+    <aside id="addon-panel">
+      <div class="panel-head">
+        <h2><i class="ic ic-puzzle"></i><span data-i18n="plugins"></span></h2>
+        <button id="panel-close" data-act="toggle-panel">&times;</button>
+      </div>
+      <div class="panel-body">
+        <div class="panel-section">
+          <span class="panel-label" data-i18n="activePlugins"></span>
+          <div id="panel-addons"></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- 5. STATUS BAR -->
+  <footer id="status-bar">
+    <div class="st-left">
+      <div class="st-badge"><span id="status-dot"></span><span id="status-text" data-i18n="idle"></span></div>
+      <div class="st-file truncate" id="st-file"></div>
+      <div class="st-license">✓ <span data-i18n="license"></span></div>
+    </div>
+    <div class="st-mid truncate" id="st-info"></div>
+    <div class="st-right">
+      <div class="st-format" id="st-format"></div>
+      <div class="st-stats">
+        <span><span id="st-rows"></span> <span data-i18n="rows"></span></span>
+        <i></i>
+        <span id="st-cols"></span>
+      </div>
+      <div class="st-ver">PRO v3.0.0 [<span id="st-lang">en</span>]</div>
+    </div>
+  </footer>
+
+  <!-- Command Palette -->
+  <div id="palette" class="modal" style="display:none">
+    <div class="palette-card">
+      <div class="palette-input">
+        <i class="ic-search"></i>
+        <input id="palette-input" type="text" placeholder="" data-i18n-ph="whatToDo"/>
+        <span id="palette-esc" data-i18n="escClose"></span>
+      </div>
+      <div id="palette-list"></div>
+      <div class="palette-foot">
+        <div><span class="key">Enter</span><span data-i18n="enterToExec"></span></div>
+        <div><span class="key">↑↓</span><span data-i18n="navKeys"></span></div>
+        <span class="palette-brand" data-i18n="quickAction"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settings" class="modal" style="display:none">
+    <div class="settings-card">
+      <div class="settings-head">
+        <h3 data-i18n="parserSettings"></h3>
+        <button data-act="close-overlay">&times;</button>
+      </div>
+      <div class="settings-body">
+        <div class="field">
+          <label data-i18n="language"></label>
+          <div class="btn-pair">
+            <button id="lang-en" data-act="lang-en">English</button>
+            <button id="lang-vi" data-act="lang-vi">Tiếng Việt</button>
+          </div>
+        </div>
+        <div class="field">
+          <label data-i18n="delimiter"></label>
+          <div class="btn-grid4">
+            <button data-act="delim-,">,</button>
+            <button data-act="delim-;">;</button>
+            <button data-act="delim-tab">Tab</button>
+            <button data-act="delim-|">|</button>
+          </div>
+        </div>
+        <div class="field switch-row">
+          <div class="switch-text">
+            <span data-i18n="headerMapping"></span>
+            <span class="sub" data-i18n="headerMappingSub"></span>
+          </div>
+          <button id="switch-hdr" data-act="toggle-hdr" class="switch"></button>
+        </div>
+      </div>
+      <div class="settings-foot">
+        <button data-act="close-overlay" class="btn-wide" data-i18n="saveChanges"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Addon System Modal -->
+  <div id="addon-modal" class="modal" style="display:none">
+    <div class="addon-card">
+      <div class="addon-head">
+        <div class="addon-logo"><i class="ic ic-puzzle big"></i></div>
+        <div class="addon-title">
+          <h2 data-i18n="enterpriseEco"></h2>
+          <p data-i18n="ecoDesc"></p>
+        </div>
+        <button class="addon-x" data-act="close-overlay">&times;</button>
+      </div>
+      <div class="addon-tabs">
+        <button id="tab-market" data-act="addon-tab:marketplace" data-i18n="marketplace"></button>
+        <button id="tab-manage" data-act="addon-tab:management" data-i18n="management"></button>
+        <button id="tab-doc" data-act="addon-tab:documentation" data-i18n="documentation"></button>
+      </div>
+      <div class="addon-body">
+        <div id="addon-market">
+          <div class="market-search">
+            <i class="ic-search"></i>
+            <input id="market-search" type="text" placeholder="" data-i18n-ph="searchStore"/>
+          </div>
+          <div id="market-list"></div>
+        </div>
+        <div id="addon-manage" class="tab-pane">
+          <div id="manage-list"></div>
+        </div>
+        <div id="addon-doc" class="tab-pane">
+          <h3>PlainSheet Addon API</h3>
+          <ul>
+            <li><b>Small addons</b> transform the in-memory grid: headers + rows in, transformed rows out.</li>
+            <li><b>Big addons</b> receive a file path and run on the file (stats, cleanup, export).</li>
+            <li>Python runtime backs the extension library (<span class="mono">~/.plainsheet/extensions/main_ext.py</span>).</li>
+            <li>Set <span class="mono">PLAINSHEET_DEV=1</span> to edit extensions in place while debugging.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="addon-foot">
+        <span>Enterprise Engine v3.0.0 STABLE</span>
+        <button data-act="close-overlay" data-i18n="closeStore"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Input Prompt Modal -->
+  <div id="input-modal" class="modal" style="display:none">
+    <div class="settings-card">
+      <div class="settings-head">
+        <h3 id="input-title">Input</h3>
+        <button data-act="input-cancel">&times;</button>
+      </div>
+      <div class="settings-body">
+        <input id="input-value" type="text" style="border:1px solid #e4e4e7;border-radius:12px;padding:12px 14px;font-size:14px;outline:none;"/>
+      </div>
+      <div class="settings-foot">
+        <button data-act="input-ok" class="btn-wide">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toasts -->
+  <div id="toasts"></div>
+
+  <!-- Busy spinner (async open/save of large files) -->
+  <div id="spinner" class="hidden">
+    <div class="spinner-box">
+      <div class="spinner-ring"></div>
+      <div id="spinner-text">Loading…</div>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
